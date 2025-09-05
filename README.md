@@ -21,7 +21,7 @@ The projects demonstrate predictive modeling, recommender systems, and explainab
 - Model interpretation using **LIME** and **SHAP**.
 - Demonstrates transparency and accountability in AI models.
 
-### 4. Time Series Forecasting *(optional, if you add later)*
+### 4. Time Series Forecasting
 - Forecasting with ARIMA, LSTM, or Prophet.
 - Applications in financial risk and demand prediction.
 

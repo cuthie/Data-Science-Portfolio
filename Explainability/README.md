@@ -6,7 +6,7 @@ This repository demonstrates **interpretable machine learning techniques** using
 
 ## Contents
 
-- `notebook.ipynb` – The main notebook containing:
+- `explainability.ipynb` – The main notebook containing:
   - Loading and preprocessing the dataset
   - Training a Random Forest classifier
   - Visualizing **feature importance**

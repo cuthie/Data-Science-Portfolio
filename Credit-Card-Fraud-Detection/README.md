@@ -11,9 +11,3 @@ Methods
 Used to address severe class imbalance by generating synthetic samples of the minority (fraudulent) class.
 	2.	Distributed Random Forest (DRF)
 The predictive model is trained using the Distributed Random Forest algorithm from the h2o.ai library, which efficiently handles large-scale datasets.
-
-Future Improvements
-	•	Feature Engineering:
-Explore the most informative features and retrain the model for improved performance.
-	•	Alternative Algorithms:
-Experiment with other machine learning models such as XGBoost, Gradient Boosting Machines (GBM), or Neural Networks to potentially achieve higher accuracy and robustness.

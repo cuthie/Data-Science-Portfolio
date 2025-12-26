@@ -1,0 +1,224 @@
+---
+title: "Regression with Random Forest and XGBoost (Tidymodels)"
+author: "Emma Green"
+date: "2025-12-25"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+---
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+------------------------------------------------------------------------
+
+## Key Concepts
+
+-   **Outcome**: continuous → regression
+-   **Models**: Random Forest (regression), Linear Regression, XGBoost
+    (regression)
+-   **Metrics**: RMSE, MAE, R²
+-   **Predictions**: numeric values
+
+------------------------------------------------------------------------
+
+```{r setup}
+library(tidymodels)
+library(dplyr)
+library(ggplot2)
+library(mlbench)
+library(ranger)
+library(xgboost)
+library(vip)
+```
+
+------------------------------------------------------------------------
+
+## Exploratory Data Analysis & Preprocessing
+
+```{r}
+data("PimaIndiansDiabetes")
+df <- PimaIndiansDiabetes
+
+# Convert invalid zeros to NA
+df_clean <- df %>%
+  mutate(across(c(triceps, glucose, pressure, insulin, mass),
+                ~ na_if(.x, 0))) %>%
+  filter(!is.na(glucose))
+```
+
+------------------------------------------------------------------------
+
+## Train / Test Split
+
+```{r}
+set.seed(1234)
+df_split <- initial_split(df_clean, prop = 0.75)
+df_train <- training(df_split)
+df_test  <- testing(df_split)
+
+df_cv <- vfold_cv(df_train)
+```
+
+------------------------------------------------------------------------
+
+## Recipe (Regression)
+
+We predict **glucose level** using the remaining variables.
+
+```{r}
+reg_recipe <- recipe(
+  glucose ~ pregnant + pressure + triceps + insulin + mass + pedigree + age,
+  data = df_clean
+) %>%
+  step_impute_knn(all_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+```
+
+------------------------------------------------------------------------
+
+## Random Forest Regression
+
+```{r}
+rf_model <- rand_forest(
+  mtry = tune(),
+  trees = tune()
+) %>%
+  set_engine("ranger", importance = "impurity") %>%
+  set_mode("regression")
+
+rf_wf <- workflow() %>%
+  add_recipe(reg_recipe) %>%
+  add_model(rf_model)
+```
+
+### Hyperparameter Tuning
+
+```{r}
+rf_grid <- expand.grid(
+  mtry = c(2, 3, 4),
+  trees = c(200, 500, 1000)
+)
+
+rf_tune <- tune_grid(
+  rf_wf,
+  resamples = df_cv,
+  grid = rf_grid,
+  metrics = metric_set(rmse, rsq, mae)
+)
+
+rf_tune %>% collect_metrics()
+```
+
+```{r}
+best_rmse <- select_best(rf_tune, metric = "rmse")
+rf_final_wf <- finalize_workflow(rf_wf, best_rmse)
+```
+
+------------------------------------------------------------------------
+
+## Final Model Evaluation
+
+```{r}
+rf_fit <- last_fit(rf_final_wf, df_split)
+
+rf_fit %>% collect_metrics()
+
+preds <- rf_fit %>% collect_predictions()
+
+# Predicted vs Actual plot
+ggplot(preds, aes(glucose, .pred)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(linetype = "dashed") +
+  labs(
+    title = "Random Forest Regression: Predicted vs Actual",
+    x = "Actual Glucose",
+    y = "Predicted Glucose"
+  ) +
+  theme_minimal()
+```
+
+------------------------------------------------------------------------
+
+## Variable Importance
+
+```{r}
+rf_fit_object <- extract_fit_parsnip(rf_fit$.workflow[[1]])$fit
+
+vip(rf_fit_object, num_features = 10)
+```
+
+------------------------------------------------------------------------
+
+## XGBoost Regression
+
+```{r}
+xgb_spec <- boost_tree(
+  trees = tune(),
+  tree_depth = tune(),
+  learn_rate = tune(),
+  loss_reduction = tune(),
+  sample_size = tune(),
+  mtry = tune()
+) %>%
+  set_engine("xgboost") %>%
+  set_mode("regression")
+
+xgb_wf <- workflow() %>%
+  add_recipe(reg_recipe) %>%
+  add_model(xgb_spec)
+```
+
+```{r}
+xgb_grid <- grid_space_filling(
+  trees(range = c(200, 1000)),
+  tree_depth(range = c(2, 10)),
+  learn_rate(range = c(0.01, 0.3)),
+  loss_reduction(),
+  sample_size = sample_prop(),
+  mtry(range = c(1, 6)),
+  size = 20
+)
+
+xgb_tune <- tune_grid(
+  xgb_wf,
+  resamples = df_cv,
+  grid = xgb_grid,
+  metrics = metric_set(rmse, rsq)
+)
+
+best_xgb <- select_best(xgb_tune, metric = "rmse")
+final_xgb <- finalize_workflow(xgb_wf, best_xgb)
+```
+
+------------------------------------------------------------------------
+
+## XGBoost Final Model Evaluation
+
+```{r}
+xgb_fit <- last_fit(final_xgb, df_split)
+
+# Performance metrics
+xgb_fit %>% collect_metrics()
+
+xgb_preds <- xgb_fit %>% collect_predictions()
+
+ggplot(xgb_preds, aes(glucose, .pred)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(linetype = "dashed") +
+  labs(
+    title = "XGBoost Regression: Predicted vs Actual",
+    x = "Actual Glucose",
+    y = "Predicted Glucose"
+  ) +
+  theme_minimal()
+
+xgb_fit_object <- extract_fit_parsnip(xgb_fit$.workflow[[1]])$fit
+
+vip(xgb_fit_object, num_features = 10)
+
+```

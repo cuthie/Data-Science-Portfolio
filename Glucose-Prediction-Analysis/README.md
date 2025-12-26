@@ -77,7 +77,7 @@ Technologies
 
 Author
 
-Your Name
+Emma Green
 
 ⸻
 

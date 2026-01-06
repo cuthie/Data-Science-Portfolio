@@ -1,6 +1,6 @@
 # Credit Card Fraud Detection — Kaggle Competition
 
-This repository contains a solution for the Kaggle Credit Card Fraud Detection competition￼, which focuses on building a classification model to detect fraudulent credit card transactions.
+This repository contains a solution for the Kaggle Credit Card Fraud Detection competition (https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)￼, which focuses on building a classification model to detect fraudulent credit card transactions.
 
 Overview
 
